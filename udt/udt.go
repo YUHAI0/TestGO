@@ -53,7 +53,8 @@ func DialUDT(net string, laddr, raddr *_net.UDPAddr) (conn Conn, err error) {
 		if m.mode == mode_server {
 			err = fmt.Errorf("Attempted to dial out from a server socket")
 		} else {
-			m.mode = mode_client
+			m.mode =
+				mode_client
 			conn, err = m.newClientSocket()
 		}
 	}
