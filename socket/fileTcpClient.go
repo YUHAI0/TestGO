@@ -14,19 +14,14 @@ func main() {
 	host := os.Args[2]
 
 	address := host
-	raddr, err := net.ResolveUDPAddr("udp", address)
-	print(raddr)
+	raddr, err := net.ResolveTCPAddr("tcp", address)
 	if err != nil {
 		return
 	}
 
-	//conn, err := net.DialUDP("udp", nil, raddr)
-
 	if err != nil {
 		return
 	}
-
-	//defer conn.Close()
 
 	pfile, e := os.Open(file)
 	if e != nil {
@@ -36,7 +31,7 @@ func main() {
 
 	var buffer = make([]byte, 2000)
 
-	connu, err := net.DialUDP("udp", nil, raddr)
+	connu, err := net.DialTCP("tcp", nil, raddr)
 
 	for {
 		nRead, err := io.ReadFull(reader, buffer)
@@ -45,19 +40,9 @@ func main() {
 		}
 		fmt.Printf("read %d bytes\n", nRead)
 
-		//n, err := io.CopyBuffer(conn, reader, buffer)
-		//if err != nil {
-		//	fmt.Printf("Err: %s\n", err.Error())
-		//	return
-		//}
-		//write, err := conn.Write(buffer)
-		//breader := bytes.NewReader(buffer)
-		//print(host, " ", err)
-
-		//write, err := bufio.NewReader(connu).Read(buffer)
-		writer := bufio.NewWriter(connu)
-		write, err := writer.Write(buffer)
-		writer.Flush()
+		//writer := bufio.NewWriter(connu)
+		//write, err := writer.Write(buffer)
+		write, err := io.CopyBuffer(connu, reader, buffer)
 
 		if err != nil {
 			print("Write err: ", err)

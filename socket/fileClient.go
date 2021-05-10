@@ -10,37 +10,59 @@ import (
 
 
 func main() {
-
-	address := "localhost:1900"
-	raddr, err := net.ResolveUDPAddr("udp", address)
-	if err != nil {
-		return
-	}
-
-	conn, err := net.DialUDP("udp", nil, raddr)
-
-	if err != nil {
-		return
-	}
-
-	defer conn.Close()
-
-	//doneChan := make(chan error, 1)
-
-	//reader := bufio.NewReader(os.Stdin)
-	//os.Args[0]
-	//file := "socket/client.go"
 	file := os.Args[1]
+	host := os.Args[2]
+
+	address := host
+	raddr, err := net.ResolveUDPAddr("udp", address)
+	print(raddr)
+	if err != nil {
+		return
+	}
+
+	//conn, err := net.DialUDP("udp", nil, raddr)
+
+	if err != nil {
+		return
+	}
+
+	//defer conn.Close()
+
 	pfile, e := os.Open(file)
 	if e != nil {
 		fmt.Printf("open file %s error: %s\n", file, e.Error())
 	}
 	reader := bufio.NewReader(pfile)
 
-	n, err := io.Copy(conn, reader)
-	if err != nil {
-		return
-	}
+	var buffer = make([]byte, 2000)
 
-	fmt.Printf("packet-written: bytes=%d\n", n)
+	connu, err := net.DialUDP("udp", nil, raddr)
+
+	for {
+		nRead, err := io.ReadFull(reader, buffer)
+		if err != nil {
+			return
+		}
+		fmt.Printf("read %d bytes\n", nRead)
+
+		//n, err := io.CopyBuffer(conn, reader, buffer)
+		//if err != nil {
+		//	fmt.Printf("Err: %s\n", err.Error())
+		//	return
+		//}
+		//write, err := conn.Write(buffer)
+		//breader := bytes.NewReader(buffer)
+		//print(host, " ", err)
+
+		//write, err := bufio.NewReader(connu).Read(buffer)
+		writer := bufio.NewWriter(connu)
+		write, err := writer.Write(buffer)
+		writer.Flush()
+
+		if err != nil {
+			print("Write err: ", err)
+			return
+		}
+		fmt.Printf("packet-written: bytes=%d\n", write)
+	}
 }
