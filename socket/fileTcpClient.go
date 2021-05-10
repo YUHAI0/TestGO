@@ -29,25 +29,35 @@ func main() {
 	}
 	reader := bufio.NewReader(pfile)
 
-	var buffer = make([]byte, 2000)
-
 	connu, err := net.DialTCP("tcp", nil, raddr)
 
+	total := 0
 	for {
+		var buffer = make([]byte, 2000)
 		nRead, err := io.ReadFull(reader, buffer)
+		total += nRead
+		print("Total:", total)
+		if nRead == 0 {
+			break
+		}
+
 		if err != nil {
+			print("Read Err: ", err)
 			return
 		}
 		fmt.Printf("read %d bytes\n", nRead)
 
-		//writer := bufio.NewWriter(connu)
-		//write, err := writer.Write(buffer)
-		write, err := io.CopyBuffer(connu, reader, buffer)
+		writer := bufio.NewWriter(connu)
+		write, Werr := writer.Write(buffer)
+		writer.Flush()
+		//write, Werr := io.Copy(connu, pfile)
 
-		if err != nil {
-			print("Write err: ", err)
+		if Werr != nil {
+			print("Write err: ", Werr)
 			return
 		}
 		fmt.Printf("packet-written: bytes=%d\n", write)
 	}
+	print("DONE")
+
 }

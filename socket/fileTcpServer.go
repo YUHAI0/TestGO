@@ -10,7 +10,6 @@ import (
 )
 
 func fileServerStart(address string, file *os.File) (err error) {
-	//var maxBufferSize = 100000000
 
 	tcpaddr, _ := net.ResolveTCPAddr("tcp", address)
 	pc, err := net.ListenTCP("tcp", tcpaddr)
@@ -30,6 +29,8 @@ func fileServerStart(address string, file *os.File) (err error) {
 	}
 
 	reader := bufio.NewReader(conn)
+	var maxBufferSize = 2000
+	buffer := make([]byte, maxBufferSize)
 	for {
 		//n, errRead := conn.Read(buffer)
 		//if errRead != nil {
@@ -39,34 +40,38 @@ func fileServerStart(address string, file *os.File) (err error) {
 
 		Serr := conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 		if Serr != nil {
+			print("Set err: ", Serr)
 			return Serr
 		}
 
-		/*
-		buffer := make([]byte, maxBufferSize)
-		n, Rerr := reader.Read(buffer)
-		if Rerr != nil {
-			print("Read err: ", Rerr)
-			return
+		full, rerr := io.ReadFull(reader, buffer)
+		if  rerr != nil {
+			return rerr
+		}
+		print("read ", full, " bytes ")
+		if full == 0 {
+			break
 		}
 
 		_, err = file.Write(buffer)
 		if err != nil {
+			print("file w e:", err)
 			return err
 		}
 
 		fmt.Printf("packet-received: bytes=%d from=%s\n",
-			n, tcpaddr.String())
-		 */
-		Copy, Cerr := io.Copy(file, reader)
-		if Cerr != nil {
-			print("Err: ", Cerr)
-			return Cerr
-		}
-		if Copy == 0 {
-			return
-		}
-		print("copy: ", Copy)
+			full, tcpaddr.String())
+
+		//Copy, Cerr := io.Copy(file, reader)
+		//if Cerr != nil {
+		//	print("Err: ", Cerr)
+		//	return Cerr
+		//}
+
+		//if Copy == 0 {
+		//	return
+		//}
+		//print("copy: ", Copy)
 	}
 }
 
