@@ -7,14 +7,14 @@ import (
 )
 
 func FileServerStart(address string, file *os.File) (err error) {
-	var maxBufferSize = 1024000
+	var maxBufferSize = 4000
 
-	addr := net.UDPAddr{
-		Port: 1900,
-		IP: net.ParseIP("0.0.0.0"),
-	}
-	//pc, err := net.ListenUDP("udp", address)
-	pc, err := net.ListenUDP("udp", &addr)
+	//addr := net.UDPAddr{
+	//	Port: 1900,
+	//	IP: net.ParseIP("0.0.0.0"),
+	//}
+	pc, err := net.ListenPacket("udp", address)
+	//pc, err := net.ListenUDP("udp", &addr)
 	if err != nil {
 		return
 	}
