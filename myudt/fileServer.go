@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"net"
 	"os"
 )
@@ -21,13 +19,13 @@ func FileServerStart(address string, file *os.File) (err error) {
 
 	for {
 		n, addr, _:= pc.ReadFrom(buffer)
-
-		copyN, err := io.CopyN(file, bytes.NewReader(buffer), int64(n))
+		_, err := file.Write(buffer)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("packet-received: bytes=%d , writed=%d, from=%s\n", copyN, addr.String())
+		fmt.Printf("packet-received: bytes=%d from=%s\n",
+			n, addr.String())
 	}
 }
 
