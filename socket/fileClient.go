@@ -33,11 +33,9 @@ func main() {
 		return
 	}
 
-	//reader := bufio.NewReader(pfile)
 	var buffer = make([]byte, 4000)
 
 	for {
-		//nRead, err := io.ReadFull(reader, buffer)
 		nRead, err  := pfile.Read(buffer[:])
 		fmt.Printf("read %d bytes\n", nRead)
 
@@ -45,12 +43,13 @@ func main() {
 			print("read full err:", err.Error())
 		}
 
-		//writer := bufio.NewWriter(conn)
-		//write, err := writer.Write(buffer)
 		n, _ := io.CopyN(conn, bytes.NewReader(buffer), int64(nRead))
-		//writer.Flush()
 
 		fmt.Printf("packet-written: bytes=%d\n", n)
+
+		var echo []byte = make([]byte, 100)
+		conn.ReadFrom(echo)
+		fmt.Printf("echo %s", string(echo))
 
 		if nRead == 0 || err == io.EOF {
 			break

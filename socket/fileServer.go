@@ -27,7 +27,9 @@ func FileServerStart(address string, file *os.File) (err error) {
 			return err
 		}
 
-		fmt.Printf("packet-received: bytes=%d , writed=%d, from=%s\n", copyN, addr.String())
+		fmt.Printf("packet-received: bytes=%d , writed=%d, from=%s\n" ,n, copyN, addr.String())
+
+		pc.WriteTo([]byte("DONE"), addr)
 	}
 }
 

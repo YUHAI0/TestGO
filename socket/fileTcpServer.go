@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+
+
 func fileServerStart(address string, file *os.File) (err error) {
 
 	tcpaddr, _ := net.ResolveTCPAddr("tcp", address)
@@ -19,7 +21,6 @@ func fileServerStart(address string, file *os.File) (err error) {
 		return
 	}
 	fmt.Printf("%s\n", pc.Addr().String())
-
 
 	print("Wait to accept...")
 	conn, Aerr := pc.Accept()
@@ -62,17 +63,8 @@ func fileServerStart(address string, file *os.File) (err error) {
 		fmt.Printf("packet-received: bytes=%d from=%s\n",
 			full, tcpaddr.String())
 
-		//Copy, Cerr := io.Copy(file, reader)
-		//if Cerr != nil {
-		//	print("Err: ", Cerr)
-		//	return Cerr
-		//}
-
-		//if Copy == 0 {
-		//	return
-		//}
-		//print("copy: ", Copy)
 	}
+	return
 }
 
 func main() {
