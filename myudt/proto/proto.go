@@ -12,6 +12,7 @@ type Proto struct {
 	Seq int
 	Length int
 	Data []byte
+	Seek int64
 }
 
 type ACK struct {
@@ -22,7 +23,7 @@ func newProtoId() string {
 	return uuid.NewString()
 }
 
-func NewProto(data []byte, seq int) Proto {
+func NewProto(data []byte, seq int, seek int64) Proto {
 	defaultVersion := "1.0"
 	length := len(data)
 	id := newProtoId()
@@ -32,6 +33,7 @@ func NewProto(data []byte, seq int) Proto {
 		Seq: seq,
 		Length: length,
 		Data: data,
+		Seek: seek,
 	}
 }
 
