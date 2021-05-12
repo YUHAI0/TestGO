@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/oxtoacart/go-udt/myudt/proto"
 	"net"
@@ -27,6 +28,11 @@ func FileServerStart(address string, file *os.File) (err error) {
 	for {
 		n, addr, _:= pc.ReadFrom(buffer)
 		data, _:= proto.Deserialize(buffer)
+		if !proto.Validate(data) {
+			j, _ := json.Marshal(data)
+			fmt.Printf("Packet not valid: %s\n", j)
+			continue
+		}
 
 		go func() {
 			fileMutex.Lock()

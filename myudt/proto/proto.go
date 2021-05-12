@@ -65,6 +65,17 @@ func Deserialize(data []byte) (Proto, error) {
 	}
 
 	return obj, nil
+
+}
+
+// Validate TODO add checksum
+func Validate(packet Proto) bool {
+	if len(packet.Data) == packet.Length &&
+		packet.Version == "1.0" {
+		return true
+	} else {
+		return false
+	}
 }
 
 func ACKSer(obj ACK) ([]byte, error) {
