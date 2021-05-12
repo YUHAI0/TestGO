@@ -43,9 +43,9 @@ func FileServerStart(address string, file *os.File) (err error) {
 			}
 		}()
 
-		fmt.Printf("packet-%d-received: version: %s, id: %s, length: %d, bytes=%d from=%s\n",
+		fmt.Printf("packet-%d-received: version: %s, id: %s, seek: %d, length: %d, bytes=%d from=%s\n",
 			data.Seq,
-			data.Version, data.Id, data.Length, n, addr.String())
+			data.Version, data.Id, data.Seek, data.Length, n, addr.String())
 
 		ack := proto.NewACK(data.Id)
 
