@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/oxtoacart/go-udt/myudt/proto"
+	"io"
 	"net"
 	"os"
 )
@@ -19,15 +21,23 @@ func FileServerStart(address string, file *os.File) (err error) {
 
 	buffer := make([]byte, maxBufferSize)
 
+	var ackCount = 0
+	var writeTotal int64 = 0
 	for {
 		n, addr, _:= pc.ReadFrom(buffer)
-
 		data, _:= proto.Deserialize(buffer)
 
-		_, err := file.Write(data.Data)
-		if err != nil {
-			return err
-		}
+		//_, err := file.Write(data.Data)
+
+		go func() {
+			copyN, err := io.Copy(file, bytes.NewReader(data.Data))
+			writeTotal += copyN
+			fmt.Printf("Total %d,\tWrite %d bytes, \n", writeTotal, copyN)
+
+			if err != nil {
+				println("Err: ", err.Error())
+			}
+		}()
 
 		fmt.Printf("packet-received: version: %s, id: %s, length: %d, bytes=%d from=%s\n",
 			data.Version, data.Id, data.Length, n, addr.String())
@@ -36,7 +46,12 @@ func FileServerStart(address string, file *os.File) (err error) {
 
 		var ad, _ = proto.ACKSer(ack)
 
+		//println("Waiting sleep...")
+		//time.Sleep(10 * time.Millisecond)
+		//println("Waiting done")
 		wn, werr := pc.WriteTo(ad, addr)
+		ackCount += 1
+		println("ACK count: ", ackCount)
 
 		fmt.Printf("Write to %d bytes\n", wn)
 
@@ -55,6 +70,7 @@ func main() {
 	}
 	err = FileServerStart("0.0.0.0:1900", pfile)
 	if err != nil {
+		println(err.Error())
 		return
 	}
 }

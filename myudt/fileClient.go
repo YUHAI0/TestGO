@@ -8,8 +8,11 @@ import (
 	"net"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 )
+
+var mainSendCount = 0
 
 /*
 func oldsendFile(host string, file string) (n int, err error) {
@@ -95,6 +98,7 @@ func (u* MyUDPConn) sendPacket(packet proto.Proto) (packetId string) {
 
 var toberesendqueue  []proto.Proto
 //var packetSignalMap map[string] chan string
+var stopSignalMapMutex = sync.RWMutex{}
 var stopSignalMap map[string] chan int = make(map[string] chan int)
 
 var daemonChan chan string = make(chan string)
@@ -133,86 +137,151 @@ func resendPacketControllerDaemon() {
 
 		// send stop signal
 		fmt.Printf("Send stop signal of packetId: %s\n", packetId)
+		stopSignalMapMutex.Lock()
 		stopSignalMap[packetId] <- 1
+		stopSignalMapMutex.Unlock()
 	}
 }
 
-func (u *MyUDPConn) readFromRemote() proto.ACK {
+func (u *MyUDPConn) readFromRemote() *proto.ACK {
 	println("#5")
 	var buf = make([]byte, 2000)
-	_, _, err := u.conn.ReadFrom(buf)
+	n, _, err := u.conn.ReadFrom(buf)
 	if err != nil {
-		return proto.ACK{}
+		println("readfrom Err: ", err.Error())
+		return nil
+	}
+	if n == 0 {
+		return nil
 	}
 
 	ack, _ := proto.ACKDes(buf)
 	println("receive ack: ", ack.Id)
-	return ack
+	return &ack
 }
+
 
 func registerStopSignal(packetId string, stopSignal chan int) {
 	println("#6")
+
+	stopSignalMapMutex.Lock()
 	stopSignalMap[packetId] = stopSignal
+	stopSignalMapMutex.Unlock()
 }
 
 func waitEchoRoutine(conn* MyUDPConn) {
 	println("#7")
 	go func() {
 		ack := conn.readFromRemote()
+		if ack == nil {
+			return
+		}
 		fmt.Printf("Receive remote %s ack: pid %s\n", conn.conn.RemoteAddr().String(), ack.Id)
 		daemonChan <- ack.Id
 	}()
 }
 
-const sendAckTimeout = 1000
+const sendAckTimeout = 30000
+//var resendMap map[string] proto.Proto = make(map[string] proto.Proto)
+//var gConn *MyUDPConn = nil
+
+var stoppedCount int32 = 0
+
+var sendCount int32 = 0
+
+var resendGoCount int32 = 0
+
 func (u* MyUDPConn) sendPacketWaitACK(packet proto.Proto) (err error) {
-	println("#8")
+	println("#8, send packet")
 	packetId := u.sendPacket(packet)
+	atomic.AddInt32(&sendCount, 1)
+
+	// register tobe resend when timeout
+	//resendMap[packetId] = packet
 
 	toberesendqueue = append(toberesendqueue, packet)
 
 	stopSignal := make(chan int)
-	resendSignal := make(chan int)
+	//resendSignal := make(chan int)
 
 	registerStopSignal(packetId, stopSignal)
 
+	//go func() {
+	//	fmt.Printf("Wait until timeout\n")
+	//	time.Sleep(sendAckTimeout * time.Millisecond)
+	//	resendSignal <- 1
+	//}()
+
+	//waitEchoRoutine(u)
+
+	println("Waiting echo...")
 	go func() {
-		fmt.Printf("Wait until timeout")
-		time.Sleep(sendAckTimeout * time.Millisecond)
-		resendSignal <- 1
+		t1 := time.Now().Unix()
+		ack := u.readFromRemote()
+		if ack == nil {
+			return
+		}
+		t2 := time.Now().Unix()
+		fmt.Printf("t1 %d, t2 %d\n", t1, t2)
+		fmt.Printf("Receive during: %d sec, remote %s ack: pid %s\n", t2-t1,u.conn.RemoteAddr().String(), ack.Id)
+		//daemonChan <- ack.Id
+		stopSignal <- 1
 	}()
 
-	waitEchoRoutine(u)
+	go func() {
+		atomic.AddInt32(&resendGoCount, 1)
+		continueSignal := make(chan int)
+		for {
+			go func() {
+				time.Sleep(sendAckTimeout * time.Millisecond)
+				continueSignal <- 1
+			}()
 
-	select {
-		case <- stopSignal:
-			println("stopped resend")
-			return
-		case <- resendSignal:
-			println("resending...")
-			serr := u.sendPacketWaitACK(packet)
-			if serr != nil {
-				return serr
+			select {
+				case <- stopSignal:
+					atomic.AddInt32(&stoppedCount, 1)
+					println("STOPPED count: ", stoppedCount)
+					println("send count: ", sendCount)
+					println("resend go count: ", resendGoCount)
+					println("main send count", mainSendCount)
+					return
+				case <- continueSignal:
+					println("CONTINUED")
 			}
-	}
+			u.sendPacket(packet)
+		}
+	}()
 
-	print("#9")
+	//select { //	case <- stopSignal:
+	//		println("stopped resend")
+	//		return
+	//	case <- resendSignal:
+	//		println("resending...")
+	//		serr := u.sendPacketWaitACK(packet)
+	//		if serr != nil {
+	//			return serr
+	//		}
+	//}
+
+	println("#send with ack done")
 	return
 }
 
+//var gConn = nil
 func sendFile(host string, file string) (n int, err error) {
 	conn := Dial(host)
 
 	pfile, e := os.Open(file)
 	if e != nil || pfile == nil {
 		fmt.Printf("open file %s error: %s\n", file, e.Error())
-		return
-	}
+		return }
 	var buffer = make([]byte, 4000)
 
 	ncount := 0
+	var windowCount = 0
+	var window = 100
+	var windowDelay = 20 * time.Millisecond
 	for {
-		print("111")
 		nRead, err  := pfile.Read(buffer[:])
 		fmt.Printf("read %d bytes\n", nRead)
 
@@ -221,21 +290,26 @@ func sendFile(host string, file string) (n int, err error) {
 		}
 
 		conn.sendData(buffer)
-		println("##########115")
+		mainSendCount += 1
+		fmt.Printf("sendCount: %d\n", mainSendCount)
 		ncount += nRead
+		windowCount += 1
+		if windowCount >= window {
+			time.Sleep(windowDelay)
+			windowCount = 0
+		}
 
 		fmt.Printf("packet-written: bytes=%d\n", n)
 
 		if nRead == 0 || err == io.EOF {
-			print("113")
 			break
 		}
-		print("112")
 	}
 	return
 }
 
 
+var wg = sync.WaitGroup{}
 func main() {
 	file := os.Args[1]
 	host := os.Args[2]
@@ -249,7 +323,16 @@ func main() {
 		return
 	}
 
-	wg := sync.WaitGroup{}
+	println("waiting go")
+	go func() {
+		for {
+			//for packetId,packet := range resendMap {
+			//
+			//}
+		}
+	}()
+
+	println("waiting group")
 	wg.Add(1)
 	wg.Wait()
 }
