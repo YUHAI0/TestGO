@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync"
 )
 
 
@@ -23,6 +24,8 @@ func FileServerStart(address string, file *os.File) (err error) {
 
 	var ackCount = 0
 	var writeTotal int64 = 0
+
+	var fileMutex = sync.RWMutex{}
 	for {
 		n, addr, _:= pc.ReadFrom(buffer)
 		data, _:= proto.Deserialize(buffer)
@@ -30,7 +33,9 @@ func FileServerStart(address string, file *os.File) (err error) {
 		//_, err := file.Write(data.Data)
 
 		go func() {
+			fileMutex.Lock()
 			copyN, err := io.Copy(file, bytes.NewReader(data.Data))
+			fileMutex.Unlock()
 			writeTotal += copyN
 			fmt.Printf("Total %d,\tWrite %d bytes, \n", writeTotal, copyN)
 
