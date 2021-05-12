@@ -208,7 +208,7 @@ func (u* MyUDPConn) sendPacketWaitACK(packet proto.Proto) (err error) {
 					return
 				case <- continueSignal:
 					atomic.AddInt32(&resendGoCount, 1)
-					//fmt.Printf("CONTINUED RESEND of packet: %s, seq: %d\n", copyPacket.Id, copyPacket.Seq)
+					fmt.Printf("CONTINUED RESEND of packet: %s, seq: %d\n", copyPacket.Id, copyPacket.Seq)
 					//j, _ := json.Marshal(copyPacket)
 					//fmt.Printf("resend packet: %s\n", j)
 					//fmt.Printf("resend data %s\n", string(copyPacket.Data))
