@@ -27,12 +27,14 @@ func NewProto(data []byte, seq int, seek int64) Proto {
 	defaultVersion := "1.0"
 	length := len(data)
 	id := newProtoId()
+	newData := make([]byte, len(data))
+	copy(newData, data)
 	return Proto{
 		Version: defaultVersion,
 		Id: id,
 		Seq: seq,
 		Length: length,
-		Data: data,
+		Data: newData,
 		Seek: seek,
 	}
 }
@@ -49,8 +51,6 @@ func Serialize(obj Proto) ([]byte, error) {
 		return nil, err
 	}
 
-	println("ser： ", len(data.Bytes()))
-
 	return data.Bytes(), nil
 }
 
@@ -59,7 +59,6 @@ func Deserialize(data []byte) (Proto, error) {
 
 	dec := gob.NewDecoder(bytes.NewReader(data))
 	err := dec.Decode(&obj)
-	println("des: ", len(data))
 	if err != nil {
 		return Proto{}, err
 	}
