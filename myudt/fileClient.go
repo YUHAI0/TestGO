@@ -13,51 +13,6 @@ import (
 )
 
 
-/*
-func oldsendFile(host string, file string) (n int, err error) {
-	raddr, err := net.ResolveUDPAddr("udp", host)
-	if err != nil {
-		return
-	}
-
-	conn, err := net.DialUDP("udp", nil, raddr)
-	if err != nil {
-		return
-	}
-
-	defer conn.Close()
-
-	pfile, e := os.Open(file)
-	if e != nil || pfile == nil {
-		fmt.Printf("open file %s error: %s\n", file, e.Error())
-		return
-	}
-
-	var buffer = make([]byte, 4000)
-
-	ncount := 0
-	for {
-		nRead, err  := pfile.Read(buffer[:])
-		fmt.Printf("read %d bytes\n", nRead)
-
-		if err != nil && err != io.EOF {
-			print("read full err:", err.Error())
-		}
-
-		n, _ := io.CopyN(conn, bytes.NewReader(buffer), int64(nRead))
-		ncount += int(n)
-
-		fmt.Printf("packet-written: bytes=%d\n", n)
-
-		if nRead == 0 || err == io.EOF {
-			break
-		}
-	}
-
-	return ncount, nil
-}
-*/
-
 type MyUDPConn struct {
 	localAddr string
 	remoteAddr string
@@ -94,11 +49,9 @@ func (u* MyUDPConn) sendDataN(data []byte, seq int, n int, seek int64) error {
 }
 
 func (u* MyUDPConn) sendPacket(packet proto.Proto) {
-	//fmt.Printf("#3, %s, %d, %s\n", packet.Version, packet.Length, packet.Id)
 	buffer, _ := proto.Serialize(packet)
 
 	//n, _ := io.Copy(u.conn, bytes.NewReader(buffer))
-
 	_, _ = io.Copy(u.conn, bytes.NewReader(buffer))
 
 	//fmt.Printf("packet-written: bytes=%d\n", n)
@@ -110,6 +63,8 @@ var stopSignalMapMutex = sync.RWMutex{}
 var stopSignalMap map[string] chan int = make(map[string] chan int)
 
 var daemonChan chan string = make(chan string)
+
+var gStopSignal chan int = make(chan int)
 
 func resendPacketControllerDaemon() {
 	println("#4")
@@ -185,7 +140,6 @@ func waitEchoRoutine(conn* MyUDPConn) {
 	}()
 }
 
-const sendAckTimeout = 1500
 
 var stoppedCount int32 = 0
 var sendCount int32 = 0
@@ -212,7 +166,7 @@ func waitingDaemon(u *MyUDPConn) {
 			stopSignal := stopSignalMap[ack.Id]
 			stopSignal <- 1
 		} else {
-			fmt.Printf("[WWWWARN] receive an unregister signal ackId %s\n", ack.Id)
+			fmt.Printf("[WARN] receive an unregister signal ackId %s\n", ack.Id)
 			fmt.Printf("len map: %d\n", len(stopSignalMap))
 		}
 		stopSignalMapMutex.Unlock()
@@ -228,6 +182,8 @@ func (u* MyUDPConn) sendPacketWaitACK(packet proto.Proto) (err error) {
 
 	stopSignal := make(chan int)
 	registerStopSignal(packet.Id, stopSignal)
+
+	const sendAckTimeout = 3000
 
 	go func() {
 		continueSignal := make(chan int)
@@ -265,7 +221,6 @@ func (u* MyUDPConn) sendPacketWaitACK(packet proto.Proto) (err error) {
 	return
 }
 
-//var gConn = nil
 func sendFile(host string, file string) (n int, err error) {
 	conn := Dial(host)
 
@@ -287,7 +242,6 @@ func sendFile(host string, file string) (n int, err error) {
 	var seek int64 = 0
 	for {
 		nRead, err  := pfile.Read(buffer[:])
-		fmt.Printf("$$$$$read %d bytes, buf size %d \n", nRead, len(buffer))
 
 		if err != nil && err != io.EOF {
 			println("read full err:", err.Error())
@@ -315,7 +269,8 @@ func sendFile(host string, file string) (n int, err error) {
 }
 
 
-var wg = sync.WaitGroup{}
+//var wg = sync.WaitGroup{}
+
 func main() {
 	file := os.Args[1]
 	host := os.Args[2]
@@ -325,7 +280,8 @@ func main() {
 		return
 	}
 
-	println("waiting group")
-	wg.Add(1)
-	wg.Wait()
+	//println("waiting group")
+	//wg.Add(1)
+	//wg.Wait()
+	<- gStopSignal
 }
