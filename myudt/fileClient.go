@@ -80,9 +80,17 @@ func Dial(addr string) (conn MyUDPConn) {
 }
 
 
-func (u* MyUDPConn) sendData(data []byte, seq int) error {
+func (u* MyUDPConn) sendData(data []byte, seq int, seek int64) error {
 	println("#2")
-	return u.sendPacketWaitACK(proto.NewProto(data, seq))
+	return u.sendPacketWaitACK(proto.NewProto(data, seq, seek))
+}
+
+func (u* MyUDPConn) sendDataN(data []byte, seq int, n int, seek int64) error {
+	println("#2")
+	if n <= 0 {
+		return nil
+	}
+	return u.sendPacketWaitACK(proto.NewProto(data[:n], seq, seek))
 }
 
 func (u* MyUDPConn) sendPacket(packet proto.Proto) {
@@ -254,19 +262,21 @@ func sendFile(host string, file string) (n int, err error) {
 	var windowCount = 0
 	var window = 100
 	var windowDelay = 20 * time.Millisecond
+	var seek int64 = 0
 	for {
 		nRead, err  := pfile.Read(buffer[:])
-		fmt.Printf("read %d bytes\n", nRead)
+		fmt.Printf("#######read %d bytes, buf size %d \n", nRead, len(buffer))
 
 		if err != nil && err != io.EOF {
 			println("read full err:", err.Error())
 		}
 
-		conn.sendData(buffer, seq)
+		conn.sendDataN(buffer, seq, nRead, seek)
 
 		seq += 1
+		seek += int64(nRead)
 
-		fmt.Printf("send seq: %d\n", seq)
+		fmt.Printf("send seq: %d, seek: %d\n", seq, seek)
 
 		ncount += nRead
 		windowCount += 1
@@ -274,8 +284,6 @@ func sendFile(host string, file string) (n int, err error) {
 			time.Sleep(windowDelay)
 			windowCount = 0
 		}
-
-		fmt.Printf("packet-written: bytes=%d\n", n)
 
 		if nRead == 0 || err == io.EOF {
 			break

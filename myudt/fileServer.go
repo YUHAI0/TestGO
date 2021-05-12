@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/oxtoacart/go-udt/myudt/proto"
-	"io"
 	"net"
 	"os"
 	"sync"
@@ -30,13 +28,14 @@ func FileServerStart(address string, file *os.File) (err error) {
 		n, addr, _:= pc.ReadFrom(buffer)
 		data, _:= proto.Deserialize(buffer)
 
-		//_, err := file.Write(data.Data)
-
 		go func() {
 			fileMutex.Lock()
-			copyN, err := io.Copy(file, bytes.NewReader(data.Data))
+			//copyN, err := io.Copy(file, bytes.NewReader(data.Data))
+			copyN, err := file.WriteAt(data.Data, data.Seek)
+
 			fileMutex.Unlock()
-			writeTotal += copyN
+
+			writeTotal += int64(copyN)
 			fmt.Printf("Total %d,\tWrite %d bytes, \n", writeTotal, copyN)
 
 			if err != nil {
