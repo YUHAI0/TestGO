@@ -12,7 +12,6 @@ import (
 	"time"
 )
 
-var mainSendCount = 0
 
 /*
 func oldsendFile(host string, file string) (n int, err error) {
@@ -81,19 +80,18 @@ func Dial(addr string) (conn MyUDPConn) {
 }
 
 
-func (u* MyUDPConn) sendData(data []byte) error {
+func (u* MyUDPConn) sendData(data []byte, seq int) error {
 	println("#2")
-	return u.sendPacketWaitACK(proto.NewProto(data))
+	return u.sendPacketWaitACK(proto.NewProto(data, seq))
 }
 
-func (u* MyUDPConn) sendPacket(packet proto.Proto) (packetId string) {
+func (u* MyUDPConn) sendPacket(packet proto.Proto) {
 	fmt.Printf("#3, %s, %d, %s\n", packet.Version, packet.Length, packet.Id)
 	buffer, _ := proto.Serialize(packet)
 
 	n, _ := io.Copy(u.conn, bytes.NewReader(buffer))
 
 	fmt.Printf("packet-written: bytes=%d\n", n)
-	return packet.Id
 }
 
 var toberesendqueue  []proto.Proto
@@ -181,38 +179,24 @@ func waitEchoRoutine(conn* MyUDPConn) {
 	}()
 }
 
-const sendAckTimeout = 30000
-//var resendMap map[string] proto.Proto = make(map[string] proto.Proto)
-//var gConn *MyUDPConn = nil
+const sendAckTimeout = 4000
 
 var stoppedCount int32 = 0
-
 var sendCount int32 = 0
-
 var resendGoCount int32 = 0
+
+var seq = 0
 
 func (u* MyUDPConn) sendPacketWaitACK(packet proto.Proto) (err error) {
 	println("#8, send packet")
-	packetId := u.sendPacket(packet)
+	u.sendPacket(packet)
 	atomic.AddInt32(&sendCount, 1)
-
-	// register tobe resend when timeout
-	//resendMap[packetId] = packet
 
 	toberesendqueue = append(toberesendqueue, packet)
 
 	stopSignal := make(chan int)
-	//resendSignal := make(chan int)
 
-	registerStopSignal(packetId, stopSignal)
-
-	//go func() {
-	//	fmt.Printf("Wait until timeout\n")
-	//	time.Sleep(sendAckTimeout * time.Millisecond)
-	//	resendSignal <- 1
-	//}()
-
-	//waitEchoRoutine(u)
+	registerStopSignal(packet.Id, stopSignal)
 
 	println("Waiting echo...")
 	go func() {
@@ -224,7 +208,6 @@ func (u* MyUDPConn) sendPacketWaitACK(packet proto.Proto) (err error) {
 		t2 := time.Now().Unix()
 		fmt.Printf("t1 %d, t2 %d\n", t1, t2)
 		fmt.Printf("Receive during: %d sec, remote %s ack: pid %s\n", t2-t1,u.conn.RemoteAddr().String(), ack.Id)
-		//daemonChan <- ack.Id
 		stopSignal <- 1
 	}()
 
@@ -243,25 +226,14 @@ func (u* MyUDPConn) sendPacketWaitACK(packet proto.Proto) (err error) {
 					println("STOPPED count: ", stoppedCount)
 					println("send count: ", sendCount)
 					println("resend go count: ", resendGoCount)
-					println("main send count", mainSendCount)
+					println("main seq: ", seq)
 					return
 				case <- continueSignal:
-					println("CONTINUED")
+					println("CONTINUED RESEND of packet: ", packet.Id)
 			}
 			u.sendPacket(packet)
 		}
 	}()
-
-	//select { //	case <- stopSignal:
-	//		println("stopped resend")
-	//		return
-	//	case <- resendSignal:
-	//		println("resending...")
-	//		serr := u.sendPacketWaitACK(packet)
-	//		if serr != nil {
-	//			return serr
-	//		}
-	//}
 
 	println("#send with ack done")
 	return
@@ -272,9 +244,10 @@ func sendFile(host string, file string) (n int, err error) {
 	conn := Dial(host)
 
 	pfile, e := os.Open(file)
-	if e != nil || pfile == nil {
+	if e != nil {
 		fmt.Printf("open file %s error: %s\n", file, e.Error())
-		return }
+		return
+	}
 	var buffer = make([]byte, 4000)
 
 	ncount := 0
@@ -286,12 +259,15 @@ func sendFile(host string, file string) (n int, err error) {
 		fmt.Printf("read %d bytes\n", nRead)
 
 		if err != nil && err != io.EOF {
-			print("read full err:", err.Error())
+			println("read full err:", err.Error())
 		}
 
-		conn.sendData(buffer)
-		mainSendCount += 1
-		fmt.Printf("sendCount: %d\n", mainSendCount)
+		conn.sendData(buffer, seq)
+
+		seq += 1
+
+		fmt.Printf("send seq: %d\n", seq)
+
 		ncount += nRead
 		windowCount += 1
 		if windowCount >= window {

@@ -9,7 +9,7 @@ import (
 type Proto struct {
 	Version string
 	Id string
-	Seek int
+	Seq int
 	Length int
 	Data []byte
 }
@@ -22,12 +22,17 @@ func newProtoId() string {
 	return uuid.NewString()
 }
 
-func NewProto(data []byte) Proto {
+func NewProto(data []byte, seq int) Proto {
 	defaultVersion := "1.0"
-	seek := 0
 	length := len(data)
 	id := newProtoId()
-	return Proto{defaultVersion, id, seek, length, data, }
+	return Proto{
+		Version: defaultVersion,
+		Id: id,
+		Seq: seq,
+		Length: length,
+		Data: data,
+	}
 }
 
 func NewACK(id string) ACK {

@@ -39,16 +39,14 @@ func FileServerStart(address string, file *os.File) (err error) {
 			}
 		}()
 
-		fmt.Printf("packet-received: version: %s, id: %s, length: %d, bytes=%d from=%s\n",
+		fmt.Printf("packet-%d-received: version: %s, id: %s, length: %d, bytes=%d from=%s\n",
+			data.Seq,
 			data.Version, data.Id, data.Length, n, addr.String())
 
 		ack := proto.NewACK(data.Id)
 
 		var ad, _ = proto.ACKSer(ack)
 
-		//println("Waiting sleep...")
-		//time.Sleep(10 * time.Millisecond)
-		//println("Waiting done")
 		wn, werr := pc.WriteTo(ad, addr)
 		ackCount += 1
 		println("ACK count: ", ackCount)
