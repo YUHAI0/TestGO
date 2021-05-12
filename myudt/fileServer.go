@@ -30,7 +30,7 @@ func FileServerStart(address string, file *os.File) (err error) {
 		data, _:= proto.Deserialize(buffer)
 		if !proto.Validate(data) {
 			j, _ := json.Marshal(data)
-			fmt.Printf("Packet not valid: %s\n", j)
+			fmt.Printf("##############Packet not valid: %s\n", j)
 			continue
 		}
 
@@ -39,14 +39,15 @@ func FileServerStart(address string, file *os.File) (err error) {
 			//copyN, err := io.Copy(file, bytes.NewReader(data.Data))
 			copyN, err := file.WriteAt(data.Data, data.Seek)
 
-			fileMutex.Unlock()
 
 			writeTotal += int64(copyN)
-			fmt.Printf("Total %d,\tWrite %d bytes, \n", writeTotal, copyN)
+			fmt.Printf("pseq: %d, pid: %s Total %d,\tWrite %d bytes, \n", data.Seq, data.Id, writeTotal, copyN)
 
 			if err != nil {
 				println("Err: ", err.Error())
 			}
+
+			fileMutex.Unlock()
 		}()
 
 		fmt.Printf("packet-%d-received: version: %s, id: %s, seek: %d, length: %d, bytes=%d from=%s\n",
