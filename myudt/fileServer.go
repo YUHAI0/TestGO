@@ -39,7 +39,6 @@ func FileServerStart(address string, file *os.File) (err error) {
 			//copyN, err := io.Copy(file, bytes.NewReader(data.Data))
 			copyN, err := file.WriteAt(data.Data, data.Seek)
 
-
 			writeTotal += int64(copyN)
 			fmt.Printf("seq: %d, Total %d,\tWrite %d bytes, \n", data.Seq, writeTotal, copyN)
 
@@ -55,9 +54,7 @@ func FileServerStart(address string, file *os.File) (err error) {
 			data.Version, data.Id, data.Seek, data.Length, n, addr.String())
 
 		ack := proto.NewACK(data.Id)
-
 		var ad, _ = proto.ACKSer(ack)
-
 		wn, werr := pc.WriteTo(ad, addr)
 		ackCount += 1
 		println("ACK count: ", ackCount)

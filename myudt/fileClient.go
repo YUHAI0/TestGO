@@ -238,7 +238,7 @@ func sendFile(host string, file string) (n int, err error) {
 	ncount := 0
 	var windowCount = 0
 	var window = 100
-	var windowDelay = 20 * time.Millisecond
+	var windowDelay = 200 * time.Millisecond
 	var seek int64 = 0
 	for {
 		nRead, err  := pfile.Read(buffer[:])
