@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+const bufsize = 10000
+
 func client(addr string, file string) {
 	key := pbkdf2.Key([]byte("demo pass"), []byte("demo salt"), 1024, 32, sha1.New)
 	block, _ := kcp.NewAESBlockCrypt(key)
@@ -25,7 +27,7 @@ func client(addr string, file string) {
 	count := 0
 	if sess, err := kcp.DialWithOptions(addr, block, 10, 3); err == nil {
 		for {
-			buf := make([]byte, 1000)
+			buf := make([]byte, bufsize)
 
 			nRead, _ := pfile.Read(buf[:])
 			count += nRead

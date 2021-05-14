@@ -36,7 +36,7 @@ func main() {
 
 // handleEcho send back everything it received
 func handleEcho(conn *kcp.UDPSession, file string) {
-	buf := make([]byte, 1000)
+	buf := make([]byte, bufsize)
 	pfile, oErr := os.Create(file)
 	if oErr != nil {
 		println("create err: ", oErr.Error())
