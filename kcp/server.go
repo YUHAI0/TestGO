@@ -45,7 +45,6 @@ func handleEcho(conn *kcp.UDPSession, file string) {
 	for {
 		n, err := conn.Read(buf[:])
 
-
 		_, err = pfile.Write(buf[:n])
 		pindex += n
 
