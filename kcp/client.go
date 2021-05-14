@@ -22,13 +22,15 @@ func client(addr string, file string) {
 
 	println(addr)
 	// dial to the echo server
+	count := 0
 	if sess, err := kcp.DialWithOptions(addr, block, 10, 3); err == nil {
 		for {
-			buf := make([]byte, 4000)
+			buf := make([]byte, 1000)
 
 			nRead, _ := pfile.Read(buf[:])
+			count += nRead
 			if nRead == 0 {
-				println("DONE")
+				println("DONE: ", count)
 				break
 			}
 
@@ -51,4 +53,8 @@ func main() {
 	addr := os.Args[1]
 	file := os.Args[2]
 	client(addr, file)
+
+	sig := make(chan int)
+
+	<-sig
 }

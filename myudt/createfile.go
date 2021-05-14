@@ -9,7 +9,7 @@ func main() {
 
 	f, _ := os.Create("1mrz")
 
-	count := 10000
+	count := 1000
 	c := 0
 
 	for {
