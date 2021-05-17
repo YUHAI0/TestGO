@@ -37,7 +37,7 @@ func singleServer(addr string, file *os.File, wg* sync.WaitGroup) {
 
 	for {
 		full, rerr := io.ReadFull(reader, buffer)
-		if  rerr != nil {
+		if  rerr != nil && full == 0 {
 			println("read err: ", rerr.Error())
 			goto end
 		}
@@ -47,9 +47,9 @@ func singleServer(addr string, file *os.File, wg* sync.WaitGroup) {
 			goto end
 		}
 
-		_, err = file.Write(buffer)
+		fw, err := file.Write(buffer)
 		if err != nil {
-			print("file w e:", err)
+			print("file w e:, file write: %d\n", err, fw)
 			goto end
 		}
 
