@@ -43,7 +43,7 @@ func main() {
 			break
 		}
 
-		if err != nil {
+		if err != nil && nRead == 0 {
 			println("Read Err: ", err.Error(), ", nRead: ", nRead)
 			return
 		}

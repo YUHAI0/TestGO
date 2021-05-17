@@ -60,8 +60,8 @@ func fileServerStart(address string, file *os.File) (err error) {
 }
 
 func main() {
-	file := os.Args[1]
 	println("args: file")
+	file := os.Args[1]
 	pfile, err := os.Create(file)
 	if err != nil {
 		fmt.Printf("open file %s error: %s\n", file, err.Error())
