@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"time"
 )
 
 func fileServerStart(address string, file *os.File) (err error) {
@@ -29,14 +28,15 @@ func fileServerStart(address string, file *os.File) (err error) {
 	reader := bufio.NewReader(conn)
 	var maxBufferSize = 2000
 	buffer := make([]byte, maxBufferSize)
+	//Serr := conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
+	//if Serr != nil {
+	//	print("Set err: ", Serr)
+	//	return Serr
+	//}
 	for {
-		Serr := conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
-		if Serr != nil {
-			print("Set err: ", Serr)
-			return Serr
-		}
 
 		full, rerr := io.ReadFull(reader, buffer)
+
 		if  rerr != nil {
 			print("Read err: ", rerr.Error(), " ", full, " bytes")
 			return rerr

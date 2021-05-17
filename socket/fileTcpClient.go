@@ -10,6 +10,7 @@ import (
 
 
 func main() {
+	println("file host")
 	file := os.Args[1]
 	host := os.Args[2]
 
@@ -37,6 +38,7 @@ func main() {
 		nRead, err := io.ReadFull(reader, buffer)
 		total += nRead
 		print("Total:", total)
+
 		if nRead == 0 {
 			break
 		}
