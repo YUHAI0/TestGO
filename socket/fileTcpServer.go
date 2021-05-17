@@ -9,23 +9,20 @@ import (
 	"time"
 )
 
-
-
 func fileServerStart(address string, file *os.File) (err error) {
-
 	tcpaddr, _ := net.ResolveTCPAddr("tcp", address)
 	pc, err := net.ListenTCP("tcp", tcpaddr)
 	//pc, err := net.ListenTCP("tcp", &addr)
 	if err != nil {
-		print("Listen err: ", err)
+		println("Listen err: ", err)
 		return
 	}
 	fmt.Printf("%s\n", pc.Addr().String())
 
-	print("Wait to accept...")
+	println("Wait to accept...")
 	conn, Aerr := pc.Accept()
 	if Aerr != nil {
-		print("Accept error: ", Aerr)
+		println("Accept error: ", Aerr)
 		return
 	}
 
@@ -33,12 +30,6 @@ func fileServerStart(address string, file *os.File) (err error) {
 	var maxBufferSize = 2000
 	buffer := make([]byte, maxBufferSize)
 	for {
-		//n, errRead := conn.Read(buffer)
-		//if errRead != nil {
-		//	print("Read err: ", errRead)
-		//	return
-		//}
-
 		Serr := conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
 		if Serr != nil {
 			print("Set err: ", Serr)
@@ -47,6 +38,7 @@ func fileServerStart(address string, file *os.File) (err error) {
 
 		full, rerr := io.ReadFull(reader, buffer)
 		if  rerr != nil {
+			print("Read err: ", rerr.Error(), " ", full, " bytes")
 			return rerr
 		}
 		print("read ", full, " bytes ")
@@ -69,6 +61,7 @@ func fileServerStart(address string, file *os.File) (err error) {
 
 func main() {
 	file := os.Args[1]
+	println("args: file")
 	pfile, err := os.Create(file)
 	if err != nil {
 		fmt.Printf("open file %s error: %s\n", file, err.Error())

@@ -11,7 +11,7 @@ import (
 )
 
 var fileMutex = sync.Mutex{}
-func singleClientSendH(address string, file *os.File, start int, total int, wg* sync.WaitGroup) {
+func singleClientSendH(address string, fileName string, start int, total int, wg* sync.WaitGroup) {
 	fmt.Printf("Send to %s, [%d, %d]\n", address, start, total)
 
 	raddr, err := net.ResolveTCPAddr("tcp", address)
@@ -19,6 +19,8 @@ func singleClientSendH(address string, file *os.File, start int, total int, wg* 
 		println("resolve: ", err.Error())
 		return
 	}
+
+	file, _ := os.Open(fileName)
 
 	reader := bufio.NewReader(file)
 
@@ -105,6 +107,8 @@ func main() {
 	hosts := os.Args[2:]
 	number := len(hosts)
 
+	println("args: file host1 host2...")
+
 	pfile, e:= os.Open(file)
 	if e != nil {
 		println(e.Error())
@@ -133,7 +137,7 @@ func main() {
 		nn := n
 		wg.Add(1)
 		go func() {
-			singleClientSendH(addr, pfile, nn*int(segment), int(total), &wg)
+			singleClientSendH(addr, file, nn*int(segment), int(total), &wg)
 		}()
 		n++
 	}

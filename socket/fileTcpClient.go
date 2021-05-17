@@ -42,9 +42,10 @@ func main() {
 		}
 
 		if err != nil {
-			print("Read Err: ", err)
+			println("Read Err: ", err.Error(), ", nRead: ", nRead)
 			return
 		}
+
 		fmt.Printf("read %d bytes\n", nRead)
 
 		writer := bufio.NewWriter(connu)
