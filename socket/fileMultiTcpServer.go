@@ -20,7 +20,6 @@ func singleServer(addr string, file *os.File, wg* sync.WaitGroup) {
 		wg.Done()
 		return
 	}
-	//fmt.Printf("%s\n", pc.Addr().String())
 
 	fmt.Printf("%s Wait to accept...\n", pc.Addr().String())
 	conn, Aerr := pc.Accept()
@@ -30,15 +29,11 @@ func singleServer(addr string, file *os.File, wg* sync.WaitGroup) {
 		wg.Done()
 	}
 
+	total := 0
+
 	reader := bufio.NewReader(conn)
 	var maxBufferSize = 2000
 	buffer := make([]byte, maxBufferSize)
-
-	//Serr := conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
-	//if Serr != nil {
-	//	print("Set err: ", Serr)
-	//	goto end
-	//}
 
 	for {
 		full, rerr := io.ReadFull(reader, buffer)
@@ -46,7 +41,8 @@ func singleServer(addr string, file *os.File, wg* sync.WaitGroup) {
 			println("read err: ", rerr.Error())
 			goto end
 		}
-		println("read ", full, " bytes ")
+		total += full
+		println("read ", full, " bytes ", " total: ", total, " bytes")
 		if full == 0 {
 			goto end
 		}
