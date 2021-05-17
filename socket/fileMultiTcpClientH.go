@@ -7,11 +7,11 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"strconv"
 	"sync"
 )
 
-func singleClientSend(address string, file *os.File, start int, total int, wg* sync.WaitGroup) {
+var fileMutex = sync.Mutex{}
+func singleClientSendH(address string, file *os.File, start int, total int, wg* sync.WaitGroup) {
 	fmt.Printf("Send to %s, [%d, %d]\n", address, start, total)
 
 	raddr, err := net.ResolveTCPAddr("tcp", address)
@@ -28,8 +28,9 @@ func singleClientSend(address string, file *os.File, start int, total int, wg* s
 		return
 	}
 
-	_, err = file.Seek(int64(start), 0)
+	//_, err = file.Seek(int64(start), 0)
 	if err != nil {
+		println("seek err:", err)
 		return
 	}
 
@@ -45,10 +46,12 @@ func singleClientSend(address string, file *os.File, start int, total int, wg* s
 			buffer = make([]byte, bufsize)
 		}
 
+		fileMutex.Lock()
 		nRead, err := io.ReadFull(reader, buffer)
+		fileMutex.Unlock()
 
 		total += nRead
-		println("", address, "Total:", total)
+		println("", address, "Total:", total, "Left: ", left)
 		if nRead == 0 {
 			break
 		}
@@ -89,6 +92,7 @@ func singleClientSend(address string, file *os.File, start int, total int, wg* s
 
 func main() {
 	file := os.Args[1]
+	/*
 	host := os.Args[2]
 
 	p64, _ := strconv.ParseInt(os.Args[3], 10, 64)
@@ -96,6 +100,10 @@ func main() {
 
 	n64, _ := strconv.ParseInt(os.Args[4], 10, 64)
 	number := int(n64)
+	*/
+
+	hosts := os.Args[2:]
+	number := len(hosts)
 
 	pfile, e:= os.Open(file)
 	if e != nil {
@@ -108,24 +116,26 @@ func main() {
 	segment := maxSize / int64(number)
 	println("max: ", maxSize)
 
-	runtime.GOMAXPROCS(1)
+	runtime.GOMAXPROCS(2)
 
 	var wg = sync.WaitGroup{}
 	println(5)
-	for p, n := port, 0; p < port + number; p, n = p+1, n+1 {
-		addr := fmt.Sprintf("%s:%d", host, p)
+	var n = 0
+	for _, host := range hosts {
+		addr := host
 		fmt.Printf("host: %s\n", addr)
 
 		total := segment
-		if p == port + number - 1 {
+		if n == n + number - 1 {
 			total = maxSize - int64(n) * segment
 			println("# max: dd: totall", maxSize, int64(n) * segment, total)
 		}
+		nn := n
 		wg.Add(1)
-		n := n
 		go func() {
-			singleClientSend(addr, pfile, n*int(segment), int(total), &wg)
+			singleClientSendH(addr, pfile, nn*int(segment), int(total), &wg)
 		}()
+		n++
 	}
 
 	println(5)

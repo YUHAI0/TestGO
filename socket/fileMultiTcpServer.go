@@ -8,7 +8,6 @@ import (
 	"os"
 	"strconv"
 	"sync"
-	"time"
 )
 
 func singleServer(addr string, file *os.File, wg* sync.WaitGroup) {
@@ -18,6 +17,7 @@ func singleServer(addr string, file *os.File, wg* sync.WaitGroup) {
 
 	if err != nil {
 		print("Listen err: ", err)
+		wg.Done()
 		return
 	}
 	//fmt.Printf("%s\n", pc.Addr().String())
@@ -27,22 +27,23 @@ func singleServer(addr string, file *os.File, wg* sync.WaitGroup) {
 
 	if Aerr != nil {
 		print("Accept error: ", Aerr)
-		return
+		wg.Done()
 	}
 
 	reader := bufio.NewReader(conn)
 	var maxBufferSize = 2000
 	buffer := make([]byte, maxBufferSize)
 
-	Serr := conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
-	if Serr != nil {
-		print("Set err: ", Serr)
-		return
-	}
+	//Serr := conn.SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
+	//if Serr != nil {
+	//	print("Set err: ", Serr)
+	//	goto end
+	//}
 
 	for {
 		full, rerr := io.ReadFull(reader, buffer)
 		if  rerr != nil {
+			println("read err: ", rerr.Error())
 			goto end
 		}
 		println("read ", full, " bytes ")
@@ -75,6 +76,7 @@ func fileMultiServerStart(host string, portStart int, number int, file *os.File,
 }
 
 func main() {
+	println("args: file number")
 	file := os.Args[1]
 	number := os.Args[2]
 	pfile, err := os.Create(file)
